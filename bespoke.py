@@ -116,6 +116,7 @@ def main():
                 # Update process_record table
                 cur.execute("UPDATE process_record SET record = %s WHERE script_name = 'bespoke'", (transaction_last_record_id,))
                 conn.commit()
+                #hhhhjdhjhjhfdhjh
 
             cur.close()
             end_time = time.time()  # End measuring time
