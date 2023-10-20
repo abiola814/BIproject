@@ -20,14 +20,14 @@ def get_last_transaction_id(conn):
     return last_transaction_rec_id
 
 def create_spark_session():
-    spark1 =SparkSession.builder.appName("Bespoke ETL Script")\
-    .config("spark.driver.extraClassPath", "/home/opc/etl_layer/db_drivers/postgresql-42.5.3.jar")\
-    .config("spark.jars", "/home/opc/etl_layer/db_drivers/postgresql-42.5.3.jar")\
-    .config("spark.sql.debug.maxToStringFields", 2000000)\
-    .getOrCreate()
+    spark1 = SparkSession.builder.appName("Bespoke ETL Script") \
+        .config("spark.driver.extraClassPath", "/home/opc/etl_layer/db_drivers/postgresql-42.5.3.jar") \
+        .config("spark.jars", "/home/opc/etl_layer/db_drivers/postgresql-42.5.3.jar") \
+        .config("spark.sql.debug.maxToStringFields", 2000000) \
+        .getOrCreate()
     return spark1
 
-def load_bespoke_data(spark, last_transaction_rec_id):
+def load_bespoke_data(spark, last_transaction_rec_id, batch_size=5000):
     processing_props = {
         "url": "jdbc:postgresql://196.46.20.76:1701/pattest",
         "user": "bespoke",
@@ -46,8 +46,7 @@ def load_bespoke_data(spark, last_transaction_rec_id):
     try:
         start_time = time.time()  # Start measuring time
 
-        df = spark.read.jdbc(url=processing_props['url'], table=table_name1, properties=processing_props).select(
-            columns_to_select_from_ds)
+        df = spark.read.jdbc(url=processing_props['url'], table=table_name1, properties=processing_props).select(columns_to_select_from_ds)
 
         df = df.orderBy('id')
 
@@ -75,15 +74,29 @@ def load_bespoke_data(spark, last_transaction_rec_id):
         df = df.withColumn("acquirer_country_code", lit(None).cast('string'))
         df = df.withColumn("channel_secondary", lit(None).cast('string'))
 
-
         # Write to Data Warehouse
-        df.write.jdbc(url=pg_url, table='public.transaction', mode="append", properties=connection_properties)
+        row_count = df.count()
+        print(f"")
+        for i in range(0, row_count, batch_size):
+            batch_df = df.limit(batch_size).filter(f"id > {last_transaction_rec_id + i}")
+            batch_df.write.jdbc(url=pg_url, table='public.transaction', mode="append", properties=connection_properties)
+
+        # Commit the transaction
+        connection_properties['user'] = 'postgres'
+        connection_properties['password'] = 'iamherenow'
+        connection_properties['driver'] = 'org.postgresql.Driver'
+        connection_properties['driverLocation'] = '/home/opc/etl_layer/db_drivers/postgresql-42.5.3.jar'
+        conn = psycopg2.connect(**connection_properties)
+        conn.commit()
+        
         end_time = time.time()  # End measuring time
         elapsed_time = end_time - start_time
         print(f"load_bespoke_data took {elapsed_time:.2f} seconds")
         return True, df
     except Exception as err:
+        print(f"Error during data transfer: {err}")
         return False, err
+
 
 def main():
     try:
@@ -115,13 +128,13 @@ def main():
             cur = conn.cursor()
             cur.execute("SELECT id FROM transaction WHERE department = 'bespoke' ORDER BY id DESC LIMIT 1")
             transaction_last_record = cur.fetchone()
+            
             print(transaction_last_record)
             if transaction_last_record:
                 transaction_last_record_id = transaction_last_record[0]
                 # Update process_record table
                 cur.execute("UPDATE process_record SET record = %s WHERE script_name = 'bespoke'", (transaction_last_record_id,))
                 conn.commit()
-                #hhhhjdhjhjhfdhjh
 
             cur.close()
             end_time = time.time()  # End measuring time
