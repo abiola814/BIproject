@@ -12,6 +12,12 @@ connection_properties = {
     "driverLocation": "/home/opc/etl_layer/db_drivers/postgresql-42.5.3.jar"
 }
 
+spark1 = SparkSession.builder.appName("Bespoke ETL Script")\
+    .config("spark.driver.extraClassPath", "/home/opc/etl_layer/db_drivers/postgresql-42.5.3.jar")\
+    .config("spark.jars", "/home/opc/etl_layer/db_drivers/postgresql-42.5.3.jar")\
+    .config("spark.sql.debug.maxToStringFields", 2000000)\
+    .getOrCreate()
+
 def get_last_transaction_id(conn):
     cur = conn.cursor()
     cur.execute("SELECT id FROM transaction ORDER BY id DESC LIMIT 1")

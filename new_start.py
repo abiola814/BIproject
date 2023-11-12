@@ -31,11 +31,14 @@ print("|===================== initialize all global varibale ===============|")
 
 
 def get_last_transaction_id(conn):
-    cur = conn.cursor()
-    cur.execute("SELECT id FROM transaction ORDER BY id DESC LIMIT 1")
-    last_transaction_rec_id = cur.fetchone()[0]
-    cur.close()
-    return last_transaction_rec_id
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT id FROM transaction ORDER BY id DESC LIMIT 1")
+        last_transaction_rec_id = cur.fetchone()[0]
+        cur.close()
+        return last_transaction_rec_id
+    except:
+        return 0
 
 def create_spark_session():
     spark1 =SparkSession.builder.appName("Bespoke ETL Script")\
@@ -59,13 +62,14 @@ def load_data_on_bespoke(spark,last_transaction_rec_id):
         "user": "bespoke",
         "password": "Bes@123",
         "driver": "org.postgresql.Driver",
+        "driverLocation": "/home/opc/etl_layer/db_drivers/postgresql-42.5.3.jar"
     }
 
     table_name1 = "switch.transactions"
 
     try:
         start_time = time.time()
-
+        print("pppppppppppppppppp")
         columns = selected_column_from_db()
         df = spark.read.jdbc(url=processing_props['url'], table=table_name1, properties=processing_props).select(columns)
 
@@ -99,10 +103,17 @@ def load_data_on_bespoke(spark,last_transaction_rec_id):
         # Write to Data Warehouse
         row_count = df.count()
         df.show()
+        batch_count = row_count // 2000
+        # Split the DataFrame into smaller batches and write each batch
+        for start in range(0, df.count(), 2000):
+            end = start + 2000
+            batch = df[start:end]
+            write_batch_to_db(batch)
+
         # for i in range(0, row_count, batch_size):
         #     batch_df = df.limit(batch_size).filter(f"id > {last_transaction_rec_id + i}")
         #     batch_df.write.jdbc(url=pg_url, table='public.transaction', mode="append", properties=connection_properties)
-
+        
         # Commit the transaction
         # connection_properties['user'] = 'postgres'
         # connection_properties['password'] = 'iamherenow'
@@ -120,8 +131,18 @@ def load_data_on_bespoke(spark,last_transaction_rec_id):
         return False, err
 
 
+def write_batch_to_db(iterator):
+    batch_delay_seconds=10
+    print("===============>>>>",iterator)
+    # Write data to the database
+    iterator.write.jdbc(url=pg_url, table='public.transaction', mode="append", properties=connection_properties)
+    print("====================>>>>>>>>>..",iterator.count())
+    time.sleep(batch_delay_seconds)
+
+
 def main():
     try:
+        
         start_time = time.time()  # Start measuring time
         last_transaction_rec_id = get_last_transaction_id(conn)
         end_time = time.time()  # End measuring time
