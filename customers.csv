@@ -1,0 +1,5 @@
+name,id,age,budget,member 
+Alice,1,25,100.0,yes 
+Bob,2,30,150.0,no
+Charlie,3,35,200.0,yes 
+David,4,40,250.0,no

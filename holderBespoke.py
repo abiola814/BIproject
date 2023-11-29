@@ -121,7 +121,7 @@ df1 = df1.sort_values(by='created', ascending=True)
 df1["department"] = "holder"
 df1["schema_type"] = "holder"
 
-items = [ 'holderid', 'isactive', 'isprepaid', 'prepaidaccountid', 'isdebit', 'bankaccount', 'pin', 'pinstreak', 'status', 'created', 'branch', 'onlineprofile', 'offlineprofile', 'institution', 'agentid', 'recurringsubscriptionfee', 'tagstatus', 'activationdate', 'lastpaymentdate', 'nextpaymentdate', 'subtype', 'subscriptiontransactionid', 'activationtransactionid', 'nickname', 'verificationaccesstime', 'verificationcomment', 'selectcount', 'verifier', 'isverified', 'agentcode', 'pendforadditionalaccount', 'isdefault', 'channel', 'recomputed']
+items = [ 'holderid', 'isactive', 'isprepaid', 'prepaidaccountid', 'isdebit', 'bankaccount', 'pin', 'pinstreak', 'status', 'branch', 'onlineprofile', 'offlineprofile', 'institution', 'agentid', 'recurringsubscriptionfee', 'tagstatus', 'activationdate', 'lastpaymentdate', 'nextpaymentdate', 'subtype', 'subscriptiontransactionid', 'activationtransactionid', 'nickname', 'verificationaccesstime', 'verificationcomment', 'selectcount', 'verifier', 'isverified', 'agentcode', 'pendforadditionalaccount', 'isdefault', 'channel', 'recomputed']
 
 # Loop through the items and set them to None in the DataFrame
 for item in items:
@@ -167,3 +167,8 @@ last_record = pd.read_sql_query(
     "SELECT id FROM holdertags ORDER BY id DESC LIMIT 1", con=engine
 )
 print("Total holdertags ID:", last_record["id"].iloc[0])
+
+cur.execute("insert into process_record(script_name, record) values(%s, %s)", ('holder', len(df1)))
+conn.commit()
+print("Data transfer completed for bespoke")
+spark1.stop()

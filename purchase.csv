@@ -1,0 +1,7 @@
+customer_name,food_name,day,budget,price,age,is_member,item_type
+Alice,Apple,2023-01-01,100,110,25,True,fruit
+Alice,Banana,2023-01-02,100,115,25,True,fruit
+Bob,Orange,2023-01-01,150,12,30,False,fruit
+Bob,Carrot,2023-01-03,150,8,30,False,vegetable
+Charlie,Apple,2023-01-02,180,11,22,True,fruit
+Charlie,Grapes,2023-01-04,180,18,22,True,fruit
